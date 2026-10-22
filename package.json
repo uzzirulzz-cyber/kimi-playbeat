@@ -1,4 +1,4 @@
-﻿{
+{
 	"name": "kimi-k3-code-desktop-ai",
 	"version": "1.0.0",
 	"private": true,
@@ -17,6 +17,7 @@
 		"@types/react-dom": "^19.1.7",
 		"@vitejs/plugin-react": "^4.7.0",
 		"typescript": "~5.8.3",
-		"vite": "^6.3.5"
+		"vite": "^6.3.5",
+		"wrangler": "^4.152.0"
 	}
 }
