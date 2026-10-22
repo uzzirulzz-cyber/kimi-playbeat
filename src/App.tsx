@@ -111,44 +111,46 @@ function App() {
 	}
 
 	return (
-		<main className="app-shell">
-			<aside className="sidebar">
-				<div className="brand"><span className="brand-mark">O</span><span>OPENAI <b>CODE</b></span></div>
-				<button className="new-chat" onClick={startNewChat}><span>＋</span> New chat</button>
-				<div className="side-label">WORKSPACE</div>
-				<button className="nav-item active"><span className="nav-glyph">◷</span> Chat</button>
-				<button className="nav-item" onClick={() => setSettingsOpen(true)}><span className="nav-glyph">⚙</span> Model settings</button>
-				<div className="sidebar-spacer" />
-				<div className="connection"><span className={apiKey ? 'status-dot ready' : 'status-dot'} />{apiKey ? 'API key configured' : 'API key needed'}</div>
-				<div className="sidebar-foot">OPENAI CODE <span>LOCAL SESSION</span></div>
+		<main className="kimi-shell">
+			<aside className="kimi-sidebar">
+				<div className="side-brand"><span className="kimi-mark">P</span><div><b>Playbeat AI</b><small>YOUR CREATIVE CO-PILOT</small></div></div>
+				<button className="new-convo" onClick={startNewChat}><span>+ New conversation</span><span className="kbd">Ctrl K</span></button>
+				<nav className="side-nav" aria-label="Workspace">
+					<button className="active"><span>◎</span>Chat</button>
+					<button onClick={() => setDraft('Research this topic in depth: ')}><span>⌕</span>Research</button>
+					<button onClick={() => setDraft('Help me design ')}><span>◇</span>Design</button>
+					<button onClick={() => setSettingsOpen(true)}><span>⚙</span>Settings</button>
+				</nav>
+				<div className="side-label">YOUR WORKSPACE</div>
+				<div className="side-item"><span className="sw" />OpenAI workspace</div>
+				<div className="connection"><span className={apiKey ? 'status-dot ready' : 'status-dot'} />{apiKey ? 'API connected' : 'API key needed'}</div>
 			</aside>
 
-			<section className="workspace">
-				<header className="topbar">
-					<div className="crumb">Chat <span>/</span> <strong>New conversation</strong></div>
+			<section className="kimi-main">
+				<header className="kimi-nav">
+					<div className="kimi-brand"><span className="kimi-mark">✦</span>Playbeat AI <span className="crumb">/ New conversation</span></div>
 					<div className="top-actions">
-						<div className="model-chip"><span className="model-dot" />{model}</div>
-						<button className="settings-button" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings">⚙</button>
+						<span className="model-chip">{model}</span>
+						<button className="gear-btn" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings">⚙</button>
 					</div>
 				</header>
 
 				<div className="chat-scroll">
 					{messages.length === 0 ? (
-						<div className="welcome">
-							<div className="welcome-kicker"><span className="model-dot" /> OPENAI CODING WORKSPACE</div>
-							<h1>What are we<br /><em>building</em> today?</h1>
-							<p>Ask a question, explore an idea, or work through a tricky bug.</p>
-							<div className="prompt-grid">
-								<button onClick={() => setDraft('Help me understand this code: ')}><span>01</span><strong>Explain a codebase</strong><small>Trace the flow and find the important parts</small></button>
-								<button onClick={() => setDraft('Help me debug this error: ')}><span>02</span><strong>Debug an issue</strong><small>Share an error and work toward a fix</small></button>
-								<button onClick={() => setDraft('Help me write a function that ')}><span>03</span><strong>Write something</strong><small>Turn a clear spec into working code</small></button>
+						<div className="empty-state">
+							<section className="hero"><div className="eyebrow-mark">✧</div><h1>A space for your next big idea</h1><p>A little curiosity, endless possibility. Think it, explore it, bring it to life.</p></section>
+							<div className="spark-head"><h2>A spark to get you started</h2><span>Choose a direction</span></div>
+							<div className="card-row">
+								<button className="spark-card" onClick={() => setDraft('Turn this rough idea into a practical plan: ')}><span>✦</span><strong>Make something</strong><small>Turn a rough idea into a brilliant plan.</small></button>
+								<button className="spark-card" onClick={() => setDraft('Research and explain this clearly: ')}><span>⌕</span><strong>Go a little deeper</strong><small>Make the complex feel simple.</small></button>
+								<button className="spark-card" onClick={() => setDraft('Help me improve this draft: ')}><span>↗</span><strong>Find your words</strong><small>A fresh perspective on your next draft.</small></button>
 							</div>
 						</div>
 					) : (
 						<div className="message-list">
 							{messages.map((message, index) => (
 								<article className={`message ${message.role}`} key={`${index}-${message.role}`}>
-									<div className="message-avatar">{message.role === 'user' ? 'Y' : 'O'}</div>
+									<div className="message-avatar">{message.role === 'user' ? 'Y' : 'AI'}</div>
 									<div className="message-body"><div className="message-author">{message.role === 'user' ? 'You' : 'OpenAI'}</div><p>{message.content}</p></div>
 								</article>
 							))}
@@ -161,10 +163,10 @@ function App() {
 				<div className="composer-wrap">
 					{error && <div className="error-banner">{error}</div>}
 					<form className="composer" onSubmit={sendMessage}>
-						<textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Ask OpenAI anything about code..." rows={2} />
-						<div className="composer-bottom"><span>ENTER TO SEND <i>·</i> SHIFT + ENTER FOR NEW LINE</span><button type="submit" disabled={busy || !draft.trim()} aria-label="Send message">{busy ? '…' : '↑'}</button></div>
+						<textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Ask anything, or imagine something new..." rows={2} />
+						<div className="composer-foot"><span className="model-chip">{model}</span><div><span className="meta">Local history</span><button className="send-btn" type="submit" disabled={busy || !draft.trim()} aria-label="Send message">{busy ? '…' : '↑'}</button></div></div>
 					</form>
-					<div className="disclaimer">AI can make mistakes. Verify important code before using it.</div>
+					<div className="toolbar"><button onClick={() => setDraft('Create a slide outline for ')}>▤ Slides</button><button onClick={() => setDraft('Research ')}>⌕ Deep Research</button><button onClick={() => setDraft('Build ')}>⚒ Build</button><button onClick={() => setDraft('Draft a document about ')}>▧ Docs</button></div>
 				</div>
 			</section>
 
