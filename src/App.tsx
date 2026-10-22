@@ -11,7 +11,37 @@ type OpenAIModel = {
 
 const defaultEndpoint = 'https://api.openai.com/v1'
 
+function LandingPage({ onStart }: { onStart: () => void }) {
+	return (
+		<main className="landing-page">
+			<nav className="landing-nav">
+				<div className="kimi-brand"><span className="kimi-mark">P</span>Playbeat AI</div>
+				<div className="landing-links"><a href="#capabilities">Capabilities</a><button onClick={onStart}>Open workspace</button></div>
+				<button className="btn-gold" onClick={onStart}>Start creating</button>
+			</nav>
+			<section className="landing-hero">
+				<span className="eyebrow">Your AI creative co-pilot</span>
+				<h1>Your next big idea, further and faster</h1>
+				<p>Playbeat AI brings research, writing, planning, and design into one focused space, so the idea in your head becomes something you can use.</p>
+				<div className="hero-actions"><button className="btn-gold" onClick={onStart}>Start creating - free</button><a className="btn-ghost" href="#capabilities">See what it can do</a></div>
+			</section>
+			<section className="landing-preview" aria-label="Product preview">
+				<div><span>Ask anything, or imagine something new...</span><button onClick={onStart} aria-label="Open workspace">↑</button></div>
+			</section>
+			<section className="capabilities" id="capabilities">
+				<header><h2>One workspace, every medium</h2><p>Each tool shares the same conversation, so your ideas keep their context.</p></header>
+				<div className="cap-grid">
+					{[['▤','Slides','Shape ideas into a clear presentation outline.'],['▧','Docs','Write, structure, and refine long-form work.'],['⊞','Analysis','Reason through data and organize findings.'],['◇','Design','Develop concepts, briefs, and visual directions.'],['⌕','Research','Go deeper with structured questions and answers.'],['⚒','Build','Turn a working idea into a practical plan.']].map(([icon,title,copy]) => <article className="cap-card" key={title}><span>{icon}</span><h3>{title}</h3><p>{copy}</p></article>)}
+				</div>
+			</section>
+			<section className="landing-cta"><h2>Ready to think bigger?</h2><p>A little curiosity. Endless possibility.</p><button className="btn-gold" onClick={onStart}>Start your first conversation</button></section>
+			<footer>© 2026 Playbeat AI, part of PlayBeat Digital.</footer>
+		</main>
+	)
+}
+
 function App() {
+	const [showLanding, setShowLanding] = useState(true)
 	const [messages, setMessages] = useState<Message[]>([])
 	const [draft, setDraft] = useState('')
 	const [apiKey, setApiKey] = useState('')
@@ -110,10 +140,12 @@ function App() {
 		setError('')
 	}
 
+	if (showLanding) return <LandingPage onStart={() => setShowLanding(false)} />
+
 	return (
 		<main className="kimi-shell">
 			<aside className="kimi-sidebar">
-				<div className="side-brand"><span className="kimi-mark">P</span><div><b>Playbeat AI</b><small>YOUR CREATIVE CO-PILOT</small></div></div>
+				<button className="side-brand" onClick={() => setShowLanding(true)}><span className="kimi-mark">P</span><span><b>Playbeat AI</b><small>YOUR CREATIVE CO-PILOT</small></span></button>
 				<button className="new-convo" onClick={startNewChat}><span>+ New conversation</span><span className="kbd">Ctrl K</span></button>
 				<nav className="side-nav" aria-label="Workspace">
 					<button className="active"><span>◎</span>Chat</button>
