@@ -27,7 +27,7 @@ jobs:
         run: npm ci
       - name: Build production site
         run: npm run build
-      - name: Validate Cloudflare configuration
+      - name: Resolve production Pages project
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::error::Missing repository secret CLOUDFLARE_API_TOKEN"
@@ -37,12 +37,23 @@ jobs:
             echo "::error::Missing repository secret CLOUDFLARE_ACCOUNT_ID"
             exit 1
           fi
-          npx wrangler pages project list
+          response=$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects")
+          project_name=$(printf '%s' "$response" | jq -r \
+            '[.result[] | select(any(.domains[]?; . == "kimi.nextradepro.top")) | .name][0] // empty')
+          if [ -z "$project_name" ]; then
+            echo "::error::No Cloudflare Pages project in this account owns kimi.nextradepro.top. The domain may be attached to a Worker instead."
+            exit 1
+          fi
+          echo "Deploying to Cloudflare Pages project: $project_name"
+          echo "CLOUDFLARE_PROJECT_NAME=$project_name" >> "$GITHUB_ENV"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Deploy to Cloudflare Pages
-        run: npx wrangler pages deploy dist --project-name=kimi-playbeat --branch=main
+        run: npx wrangler pages deploy dist --project-name="$CLOUDFLARE_PROJECT_NAME" --branch=main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
