@@ -54,8 +54,8 @@ function LandingPage({ onStart }: { onStart: () => void }) {
 	)
 }
 
-function AuthDialog({ mode, loading, name, email, password, error, onMode, onName, onEmail, onPassword, onSubmit, onClose }: { mode:'signin'|'signup'; loading:boolean; name:string; email:string; password:string; error:string; onMode:(mode:'signin'|'signup')=>void; onName:(value:string)=>void; onEmail:(value:string)=>void; onPassword:(value:string)=>void; onSubmit:(event:FormEvent)=>void; onClose:()=>void }) {
-	return <div className="auth-backdrop"><section className="auth-dialog" role="dialog" aria-modal="true"><button className="close-button auth-close" onClick={onClose}>×</button><span className="kimi-mark">P</span><div><span className="modal-kicker">PLAYBEAT ACCOUNT</span><h2>{mode === 'signup' ? 'Create your workspace' : 'Welcome back'}</h2><p>{mode === 'signup' ? 'Save your profile and continue your work across sessions.' : 'Sign in to continue to your workspace.'}</p></div>{error && <div className="error-banner">{error}</div>}<form onSubmit={onSubmit}>{mode === 'signup' && <label>Name<input value={name} onChange={(event)=>onName(event.target.value)} required /></label>}<label>Email<input type="email" value={email} onChange={(event)=>onEmail(event.target.value)} required /></label><label>Password<input type="password" minLength={8} value={password} onChange={(event)=>onPassword(event.target.value)} required /></label><button className="save-button" disabled={loading}>{loading ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Sign in'}<span>→</span></button></form><button className="auth-switch" onClick={()=>onMode(mode === 'signup' ? 'signin' : 'signup')}>{mode === 'signup' ? 'Already have an account? Sign in' : 'New to Playbeat? Create account'}</button></section></div>
+function AuthDialog({ mode, loading, name, email, password, error, onMode, onName, onEmail, onPassword, onSubmit, onSocial, onClose }: { mode:'signin'|'signup'; loading:boolean; name:string; email:string; password:string; error:string; onMode:(mode:'signin'|'signup')=>void; onName:(value:string)=>void; onEmail:(value:string)=>void; onPassword:(value:string)=>void; onSubmit:(event:FormEvent)=>void; onSocial:(provider:'google'|'github')=>void; onClose:()=>void }) {
+	return <div className="auth-backdrop"><section className="auth-dialog" role="dialog" aria-modal="true"><button className="close-button auth-close" onClick={onClose}>×</button><span className="kimi-mark">P</span><div><span className="modal-kicker">PLAYBEAT ACCOUNT</span><h2>{mode === 'signup' ? 'Create your workspace' : 'Welcome back'}</h2><p>{mode === 'signup' ? 'Save your profile and continue your work across sessions.' : 'Sign in to continue to your workspace.'}</p></div>{error && <div className="error-banner">{error}</div>}<div className="social-auth"><button onClick={()=>onSocial('google')}><b>G</b>Continue with Google</button><button onClick={()=>onSocial('github')}><b>GH</b>Continue with GitHub</button></div><div className="auth-divider"><span>or use email</span></div><form onSubmit={onSubmit}>{mode === 'signup' && <label>Name<input value={name} onChange={(event)=>onName(event.target.value)} required /></label>}<label>Email<input type="email" value={email} onChange={(event)=>onEmail(event.target.value)} required /></label><label>Password<input type="password" minLength={8} value={password} onChange={(event)=>onPassword(event.target.value)} required /></label><button className="save-button" disabled={loading}>{loading ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Sign in'}<span>→</span></button></form><button className="auth-switch" onClick={()=>onMode(mode === 'signup' ? 'signin' : 'signup')}>{mode === 'signup' ? 'Already have an account? Sign in' : 'New to Playbeat? Create account'}</button></section></div>
 }
 
 function App() {
@@ -115,6 +115,13 @@ function App() {
 	async function signOut() {
 		await authClient?.signOut()
 		setAuthUser(null); setProfileMenuOpen(false); setAuthOpen(true); setAuthMode('signin')
+	}
+
+	async function socialSignIn(provider: 'google' | 'github') {
+		if (!authClient) { setAuthError('Neon Auth is not configured.'); return }
+		setAuthError('')
+		const result = await authClient.signIn.social({ provider, callbackURL: window.location.origin })
+		if (result.error) setAuthError(result.error.message || `${provider} sign-in failed.`)
 	}
 
 	function openWorkspaceMode(mode: 'chat' | 'research' | 'design') {
@@ -265,7 +272,7 @@ function App() {
 
 	const previewHtml = extractHtml(messages)
 
-	const authDialog = authOpen && <AuthDialog mode={authMode} loading={authLoading} name={authName} email={authEmail} password={authPassword} error={authError} onMode={setAuthMode} onName={setAuthName} onEmail={setAuthEmail} onPassword={setAuthPassword} onSubmit={submitAuth} onClose={() => setAuthOpen(false)} />
+	const authDialog = authOpen && <AuthDialog mode={authMode} loading={authLoading} name={authName} email={authEmail} password={authPassword} error={authError} onMode={setAuthMode} onName={setAuthName} onEmail={setAuthEmail} onPassword={setAuthPassword} onSubmit={submitAuth} onSocial={(provider) => void socialSignIn(provider)} onClose={() => setAuthOpen(false)} />
 	function enterWorkspace() { if (authUser) setShowLanding(false); else setAuthOpen(true) }
 
 	if (showLanding) return <><LandingPage onStart={enterWorkspace} />{authDialog}</>
