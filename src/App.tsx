@@ -118,7 +118,7 @@ function App() {
 				: await authClient.signIn.email({ email: authEmail.trim(), password: authPassword })
 			const session = await authClient.getSession()
 			setAuthUser((session.data?.user as AuthUser | undefined) ?? null)
-			setAuthOpen(false); setAuthPassword('')
+			setAuthOpen(false); setAuthPassword(''); setShowLanding(false)
 		} catch (authRequestError) { setAuthError(authRequestError instanceof Error ? authRequestError.message : 'Authentication failed.') }
 		finally { setAuthLoading(false) }
 	}
@@ -131,7 +131,12 @@ function App() {
 	async function socialSignIn(provider: 'google' | 'github') {
 		if (!authClient) { setAuthError('Firebase Authentication is not configured.'); return }
 		setAuthError('')
-		try { await authClient.signIn.social({ provider, callbackURL: window.location.origin }) }
+		try {
+			const result = await authClient.signIn.social({ provider, callbackURL: window.location.origin })
+			setAuthUser(result.data.user)
+			setAuthOpen(false)
+			setShowLanding(false)
+		}
 		catch (socialError) { setAuthError(socialError instanceof Error ? socialError.message : `${provider} sign-in failed.`) }
 	}
 
