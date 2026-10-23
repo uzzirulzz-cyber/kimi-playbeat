@@ -1,6 +1,6 @@
 ﻿import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 
-import { authClient, type AuthUser } from './lib/auth'
+import { authClient, type AuthUser, watchAuth } from './lib/auth'
 import { clearVault, getVaultMeta, saveVault, unlockVault } from './lib/vault'
 
 type Message = {
@@ -92,19 +92,18 @@ function App() {
 	const composerRef = useRef<HTMLTextAreaElement>(null)
 
 	useEffect(() => {
-		if (!authClient) { setAuthLoading(false); return }
-		void authClient.getSession().then(({ data }) => setAuthUser((data?.user as AuthUser | undefined) ?? null)).finally(() => setAuthLoading(false))
+		const unsubscribe = watchAuth((user) => { setAuthUser(user); setAuthLoading(false) })
+		return unsubscribe
 	}, [])
 
 	async function submitAuth(event: FormEvent) {
 		event.preventDefault()
-		if (!authClient) { setAuthError('Neon Auth is not configured yet. Add VITE_NEON_AUTH_URL in Cloudflare Pages.'); return }
+		if (!authClient) { setAuthError('Firebase Authentication is not configured yet.'); return }
 		setAuthLoading(true); setAuthError('')
 		try {
-			const result = authMode === 'signup'
+			authMode === 'signup'
 				? await authClient.signUp.email({ name: authName.trim(), email: authEmail.trim(), password: authPassword })
 				: await authClient.signIn.email({ email: authEmail.trim(), password: authPassword })
-			if (result.error) throw new Error(result.error.message || 'Authentication failed.')
 			const session = await authClient.getSession()
 			setAuthUser((session.data?.user as AuthUser | undefined) ?? null)
 			setAuthOpen(false); setAuthPassword('')
@@ -118,10 +117,10 @@ function App() {
 	}
 
 	async function socialSignIn(provider: 'google' | 'github') {
-		if (!authClient) { setAuthError('Neon Auth is not configured.'); return }
+		if (!authClient) { setAuthError('Firebase Authentication is not configured.'); return }
 		setAuthError('')
-		const result = await authClient.signIn.social({ provider, callbackURL: window.location.origin })
-		if (result.error) setAuthError(result.error.message || `${provider} sign-in failed.`)
+		try { await authClient.signIn.social({ provider, callbackURL: window.location.origin }) }
+		catch (socialError) { setAuthError(socialError instanceof Error ? socialError.message : `${provider} sign-in failed.`) }
 	}
 
 	function openWorkspaceMode(mode: 'chat' | 'research' | 'design') {
