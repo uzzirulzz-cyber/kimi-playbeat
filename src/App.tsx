@@ -1,5 +1,6 @@
-﻿import { FormEvent, KeyboardEvent, useRef, useState } from 'react'
+﻿import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 
+import { authClient, type AuthUser } from './lib/auth'
 import { clearVault, getVaultMeta, saveVault, unlockVault } from './lib/vault'
 
 type Message = {
@@ -53,6 +54,10 @@ function LandingPage({ onStart }: { onStart: () => void }) {
 	)
 }
 
+function AuthDialog({ mode, loading, name, email, password, error, onMode, onName, onEmail, onPassword, onSubmit, onClose }: { mode:'signin'|'signup'; loading:boolean; name:string; email:string; password:string; error:string; onMode:(mode:'signin'|'signup')=>void; onName:(value:string)=>void; onEmail:(value:string)=>void; onPassword:(value:string)=>void; onSubmit:(event:FormEvent)=>void; onClose:()=>void }) {
+	return <div className="auth-backdrop"><section className="auth-dialog" role="dialog" aria-modal="true"><button className="close-button auth-close" onClick={onClose}>×</button><span className="kimi-mark">P</span><div><span className="modal-kicker">PLAYBEAT ACCOUNT</span><h2>{mode === 'signup' ? 'Create your workspace' : 'Welcome back'}</h2><p>{mode === 'signup' ? 'Save your profile and continue your work across sessions.' : 'Sign in to continue to your workspace.'}</p></div>{error && <div className="error-banner">{error}</div>}<form onSubmit={onSubmit}>{mode === 'signup' && <label>Name<input value={name} onChange={(event)=>onName(event.target.value)} required /></label>}<label>Email<input type="email" value={email} onChange={(event)=>onEmail(event.target.value)} required /></label><label>Password<input type="password" minLength={8} value={password} onChange={(event)=>onPassword(event.target.value)} required /></label><button className="save-button" disabled={loading}>{loading ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Sign in'}<span>→</span></button></form><button className="auth-switch" onClick={()=>onMode(mode === 'signup' ? 'signin' : 'signup')}>{mode === 'signup' ? 'Already have an account? Sign in' : 'New to Playbeat? Create account'}</button></section></div>
+}
+
 function App() {
 	const [showLanding, setShowLanding] = useState(true)
 	const [messages, setMessages] = useState<Message[]>([])
@@ -76,7 +81,41 @@ function App() {
 	const [settingsSection, setSettingsSection] = useState<SettingsSection>('api')
 	const [profileMenuOpen, setProfileMenuOpen] = useState(false)
 	const [compactMode, setCompactMode] = useState(false)
+	const [authUser, setAuthUser] = useState<AuthUser | null>(null)
+	const [authLoading, setAuthLoading] = useState(true)
+	const [authOpen, setAuthOpen] = useState(false)
+	const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup')
+	const [authName, setAuthName] = useState('')
+	const [authEmail, setAuthEmail] = useState('')
+	const [authPassword, setAuthPassword] = useState('')
+	const [authError, setAuthError] = useState('')
 	const composerRef = useRef<HTMLTextAreaElement>(null)
+
+	useEffect(() => {
+		if (!authClient) { setAuthLoading(false); return }
+		void authClient.getSession().then(({ data }) => setAuthUser((data?.user as AuthUser | undefined) ?? null)).finally(() => setAuthLoading(false))
+	}, [])
+
+	async function submitAuth(event: FormEvent) {
+		event.preventDefault()
+		if (!authClient) { setAuthError('Neon Auth is not configured yet. Add VITE_NEON_AUTH_URL in Cloudflare Pages.'); return }
+		setAuthLoading(true); setAuthError('')
+		try {
+			const result = authMode === 'signup'
+				? await authClient.signUp.email({ name: authName.trim(), email: authEmail.trim(), password: authPassword })
+				: await authClient.signIn.email({ email: authEmail.trim(), password: authPassword })
+			if (result.error) throw new Error(result.error.message || 'Authentication failed.')
+			const session = await authClient.getSession()
+			setAuthUser((session.data?.user as AuthUser | undefined) ?? null)
+			setAuthOpen(false); setAuthPassword('')
+		} catch (authRequestError) { setAuthError(authRequestError instanceof Error ? authRequestError.message : 'Authentication failed.') }
+		finally { setAuthLoading(false) }
+	}
+
+	async function signOut() {
+		await authClient?.signOut()
+		setAuthUser(null); setProfileMenuOpen(false); setAuthOpen(true); setAuthMode('signin')
+	}
 
 	function openWorkspaceMode(mode: 'chat' | 'research' | 'design') {
 		setWorkspaceView('chat')
@@ -226,7 +265,10 @@ function App() {
 
 	const previewHtml = extractHtml(messages)
 
-	if (showLanding) return <LandingPage onStart={() => setShowLanding(false)} />
+	const authDialog = authOpen && <AuthDialog mode={authMode} loading={authLoading} name={authName} email={authEmail} password={authPassword} error={authError} onMode={setAuthMode} onName={setAuthName} onEmail={setAuthEmail} onPassword={setAuthPassword} onSubmit={submitAuth} onClose={() => setAuthOpen(false)} />
+	function enterWorkspace() { if (authUser) setShowLanding(false); else setAuthOpen(true) }
+
+	if (showLanding) return <><LandingPage onStart={enterWorkspace} />{authDialog}</>
 
 	return (
 		<main className="kimi-shell">
@@ -243,8 +285,8 @@ function App() {
 				<div className="side-label">RECENTS</div>
 				<button className="recent-item" onClick={() => setWorkspaceView('chat')}>{messages[0]?.content || 'Your first Playbeat conversation'}</button>
 				<div className="profile-area">
-					{profileMenuOpen && <div className="profile-menu"><button onClick={() => { setSettingsSection('profile'); setSettingsOpen(true); setProfileMenuOpen(false) }}>Profile</button><button onClick={() => { setSettingsSection('api'); setSettingsOpen(true); setProfileMenuOpen(false) }}>API & models</button><button onClick={() => { setSettingsSection('general'); setSettingsOpen(true); setProfileMenuOpen(false) }}>Settings</button></div>}
-					<button className="profile-button" onClick={() => setProfileMenuOpen((open) => !open)}><span className="profile-avatar">{(profileName || 'G').slice(0,1).toUpperCase()}</span><span><b>{profileName || 'Guest profile'}</b><small><span className={apiKey ? 'status-dot ready' : 'status-dot'} />{apiKey ? 'OpenAI connected' : vaultMeta ? 'Profile locked' : 'API key needed'}</small></span><span>⌃</span></button>
+					{profileMenuOpen && <div className="profile-menu"><button onClick={() => { setSettingsSection('profile'); setSettingsOpen(true); setProfileMenuOpen(false) }}>Profile</button><button onClick={() => { setSettingsSection('api'); setSettingsOpen(true); setProfileMenuOpen(false) }}>API & models</button><button onClick={() => { setSettingsSection('general'); setSettingsOpen(true); setProfileMenuOpen(false) }}>Settings</button><button onClick={() => void signOut()}>Sign out</button></div>}
+					<button className="profile-button" onClick={() => setProfileMenuOpen((open) => !open)}><span className="profile-avatar">{(authUser?.name || authUser?.email || 'G').slice(0,1).toUpperCase()}</span><span><b>{authUser?.name || authUser?.email || 'Guest profile'}</b><small><span className={apiKey ? 'status-dot ready' : 'status-dot'} />{apiKey ? 'OpenAI connected' : vaultMeta ? 'Profile locked' : 'API key needed'}</small></span><span>⌃</span></button>
 				</div>
 			</aside>
 
@@ -308,6 +350,7 @@ function App() {
 					<button className="save-button" onClick={() => { setSettingsOpen(false); setError('') }}>Done <span>→</span></button>
 				</section>
 			</div>}
+			{authDialog}
 				{previewOpen && <div className="preview-backdrop">
 					<section className="website-preview" role="dialog" aria-modal="true" aria-label="Website preview">
 						<header><div><span>WEBSITE PREVIEW</span><b>Sandboxed output</b></div><button onClick={() => setPreviewOpen(false)} aria-label="Close preview">×</button></header>
