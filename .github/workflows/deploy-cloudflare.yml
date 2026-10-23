@@ -37,10 +37,15 @@ jobs:
             echo "::error::Missing repository secret CLOUDFLARE_ACCOUNT_ID"
             exit 1
           fi
+          account_id=$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | tr -d '[:space:]')
+          if [[ ! "$account_id" =~ ^[A-Za-z0-9_-]+$ ]]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID contains invalid characters"
+            exit 1
+          fi
           response=$(curl --fail-with-body --silent --show-error \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             -H "Content-Type: application/json" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects")
+            "https://api.cloudflare.com/client/v4/accounts/$account_id/pages/projects")
           project_name=$(printf '%s' "$response" | jq -r \
             '[.result[] | select(any(.domains[]?; . == "kimi.nextradepro.top")) | .name][0] // empty')
           if [ -z "$project_name" ]; then
