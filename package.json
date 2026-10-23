@@ -9,6 +9,8 @@
 		"preview": "vite preview --host 0.0.0.0"
 	},
 	"dependencies": {
+		"bootstrap": "^5.3.8",
+		"bootstrap-icons": "^1.13.2",
 		"firebase": "^13.1.0",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0"

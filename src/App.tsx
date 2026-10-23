@@ -292,13 +292,13 @@ function App() {
 		<main className="kimi-shell">
 			<aside className="kimi-sidebar">
 				<button className="side-brand" onClick={() => setShowLanding(true)}><img className="brand-logo compact" src="/kimi-playbeat-logo.png" alt="Kimi Playbeat" /><span><b>Playbeat AI</b><small>YOUR CREATIVE CO-PILOT</small></span></button>
-				<button className="new-convo" onClick={startNewChat}><span>+ New conversation</span><span className="kbd">Ctrl K</span></button>
+				<button className="new-convo btn" onClick={startNewChat}><span><i className="bi bi-plus-lg" /> New conversation</span><span className="kbd">Ctrl K</span></button>
 				<nav className="side-nav" aria-label="Workspace">
-					<button className={workspaceView === 'chat' && workspaceMode === 'chat' ? 'active' : ''} onClick={() => openWorkspaceMode('chat')}><span>◎</span>Chat</button>
-					<button className={workspaceView === 'chat' && workspaceMode === 'research' ? 'active' : ''} onClick={() => openWorkspaceMode('research')}><span>⌕</span>Research</button>
-					<button className={workspaceView === 'chat' && workspaceMode === 'design' ? 'active' : ''} onClick={() => openWorkspaceMode('design')}><span>◇</span>Design</button>
-					<button className={workspaceView === 'library' ? 'active' : ''} onClick={() => setWorkspaceView('library')}><span>▤</span>Library</button>
-					<button className={workspaceView === 'explore' ? 'active' : ''} onClick={() => setWorkspaceView('explore')}><span>✦</span>Explore</button>
+					<button className={workspaceView === 'chat' && workspaceMode === 'chat' ? 'active' : ''} onClick={() => openWorkspaceMode('chat')}><span><i className="bi bi-chat-left-text" /></span>Chat</button>
+					<button className={workspaceView === 'chat' && workspaceMode === 'research' ? 'active' : ''} onClick={() => openWorkspaceMode('research')}><span><i className="bi bi-search" /></span>Research</button>
+					<button className={workspaceView === 'chat' && workspaceMode === 'design' ? 'active' : ''} onClick={() => openWorkspaceMode('design')}><span><i className="bi bi-bezier2" /></span>Design</button>
+					<button className={workspaceView === 'library' ? 'active' : ''} onClick={() => setWorkspaceView('library')}><span><i className="bi bi-collection" /></span>Library</button>
+					<button className={workspaceView === 'explore' ? 'active' : ''} onClick={() => setWorkspaceView('explore')}><span><i className="bi bi-compass" /></span>Explore</button>
 				</nav>
 				<div className="side-label">RECENTS</div>
 				<button className="recent-item" onClick={() => setWorkspaceView('chat')}>{messages[0]?.content || 'Your first Playbeat conversation'}</button>
@@ -313,7 +313,7 @@ function App() {
 					<div className="kimi-brand"><img className="brand-logo compact" src="/kimi-playbeat-logo.png" alt="Kimi Playbeat" /><span className="crumb">/ {workspaceView === 'chat' ? 'Conversation' : workspaceView === 'library' ? 'Library' : 'Explore'}</span></div>
 					<div className="top-actions">
 						<button className="model-chip model-button" onClick={() => { setSettingsSection('api'); setSettingsOpen(true) }}>{model}</button>
-						<button className="gear-btn" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings">⚙</button>
+						<button className="gear-btn btn" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings"><i className="bi bi-sliders" /></button>
 					</div>
 				</header>
 
