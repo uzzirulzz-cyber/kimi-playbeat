@@ -16,6 +16,13 @@ type WorkspaceView = 'chat' | 'library' | 'explore'
 type SettingsSection = 'general' | 'appearance' | 'profile' | 'security' | 'api' | 'storage'
 
 const defaultEndpoint = '/api/openai'
+const modelBots = [
+	{ name: 'GPT-4.1', tag: 'Flagship', model: 'gpt-4.1', mark: '4.1', tone: 'gold' },
+	{ name: 'GPT-4.1 mini', tag: 'Everyday', model: 'gpt-4.1-mini', mark: 'M', tone: 'blue' },
+	{ name: 'o4-mini', tag: 'Reasoning', model: 'o4-mini', mark: 'O', tone: 'mint' },
+	{ name: 'GPT-4o', tag: 'Multimodal', model: 'gpt-4o', mark: 'V', tone: 'coral' },
+	{ name: 'GPT-4o mini', tag: 'Fast', model: 'gpt-4o-mini', mark: 'F', tone: 'silver' },
+]
 
 function extractHtml(messages: Message[]) {
 	const answer = [...messages].reverse().find((message) => message.role === 'assistant')?.content ?? ''
@@ -23,6 +30,11 @@ function extractHtml(messages: Message[]) {
 	if (fenced?.[1]) return fenced[1]
 	const documentStart = answer.search(/<!doctype html|<html[\s>]/i)
 	return documentStart >= 0 ? answer.slice(documentStart) : ''
+}
+
+function ModelRail({ selected, onSelect }: { selected:string; onSelect:(model:string)=>void }) {
+	const bots = [...modelBots, ...modelBots]
+	return <section className="model-bots" aria-label="Choose an OpenAI model"><header><div><span>MODEL BOTS</span><h2>Choose your specialist</h2></div><small>Click to switch instantly</small></header><div className="bot-rail"><div className="bot-track">{bots.map((bot,index) => <button className={`bot-card ${selected === bot.model ? 'selected' : ''}`} onClick={() => onSelect(bot.model)} key={`${bot.model}-${index}`} aria-label={`Use ${bot.name}`}><span className={`bot-icon ${bot.tone}`}>{bot.mark}</span><b>{bot.name}</b><small>{bot.tag}</small></button>)}</div></div></section>
 }
 
 function LandingPage({ onStart }: { onStart: () => void }) {
@@ -311,6 +323,7 @@ function App() {
 					{workspaceView === 'chat' && (messages.length === 0 ? (
 						<div className="empty-state">
 							<section className="hero"><div className="eyebrow-mark">✧</div><h1>A space for your next big idea</h1><p>A little curiosity, endless possibility. Think it, explore it, bring it to life.</p></section>
+							<ModelRail selected={model} onSelect={setModel} />
 							<div className="spark-head"><h2>A spark to get you started</h2><span>Choose a direction</span></div>
 							<div className="card-row">
 								<button className="spark-card" onClick={() => setDraft('Turn this rough idea into a practical plan: ')}><span>✦</span><strong>Make something</strong><small>Turn a rough idea into a brilliant plan.</small></button>
