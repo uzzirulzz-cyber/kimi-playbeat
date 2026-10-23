@@ -1,4 +1,6 @@
-﻿import { FormEvent, KeyboardEvent, useState } from 'react'
+﻿import { FormEvent, KeyboardEvent, useRef, useState } from 'react'
+
+import { clearVault, getVaultMeta, saveVault, unlockVault } from './lib/vault'
 
 type Message = {
 	role: 'user' | 'assistant'
@@ -9,7 +11,15 @@ type OpenAIModel = {
 	id: string
 }
 
-const defaultEndpoint = 'https://api.openai.com/v1'
+const defaultEndpoint = '/api/openai'
+
+function extractHtml(messages: Message[]) {
+	const answer = [...messages].reverse().find((message) => message.role === 'assistant')?.content ?? ''
+	const fenced = answer.match(/```html\s*([\s\S]*?)```/i)
+	if (fenced?.[1]) return fenced[1]
+	const documentStart = answer.search(/<!doctype html|<html[\s>]/i)
+	return documentStart >= 0 ? answer.slice(documentStart) : ''
+}
 
 function LandingPage({ onStart }: { onStart: () => void }) {
 	return (
@@ -52,6 +62,69 @@ function App() {
 	const [models, setModels] = useState<OpenAIModel[]>([])
 	const [loadingModels, setLoadingModels] = useState(false)
 	const [error, setError] = useState('')
+	const [vaultMeta, setVaultMeta] = useState(getVaultMeta)
+	const [profileName, setProfileName] = useState(() => getVaultMeta()?.profileName ?? '')
+	const [vaultPassword, setVaultPassword] = useState('')
+	const [vaultDays, setVaultDays] = useState('7')
+	const [vaultBusy, setVaultBusy] = useState(false)
+	const [previewOpen, setPreviewOpen] = useState(false)
+	const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'research' | 'design'>('chat')
+	const composerRef = useRef<HTMLTextAreaElement>(null)
+
+	function openWorkspaceMode(mode: 'chat' | 'research' | 'design') {
+		setWorkspaceMode(mode)
+		if (mode === 'research') setDraft('Research this topic in depth: ')
+		if (mode === 'design') setDraft('Help me design ')
+		requestAnimationFrame(() => composerRef.current?.focus())
+	}
+
+	async function saveProfile() {
+		if (!profileName.trim() || !apiKey.trim() || vaultPassword.length < 8) {
+			setError('Enter a profile name, API key, and a profile password of at least 8 characters.')
+			return
+		}
+		setVaultBusy(true)
+		try {
+			const expiresAt = Date.now() + Number(vaultDays) * 86_400_000
+			await saveVault({ profileName: profileName.trim(), apiKey: apiKey.trim(), endpoint, model, expiresAt }, vaultPassword)
+			setVaultMeta({ profileName: profileName.trim(), expiresAt })
+			setVaultPassword('')
+			setError('')
+		} finally {
+			setVaultBusy(false)
+		}
+	}
+
+	async function unlockProfile() {
+		if (!vaultPassword) {
+			setError('Enter your profile password to unlock the saved key.')
+			return
+		}
+		setVaultBusy(true)
+		try {
+			const saved = await unlockVault(vaultPassword)
+			setProfileName(saved.profileName)
+			setApiKey(saved.apiKey)
+			setEndpoint(saved.endpoint === 'https://api.openai.com/v1' ? defaultEndpoint : saved.endpoint)
+			setModel(saved.model)
+			setVaultPassword('')
+			setError('')
+		} catch (vaultError) {
+			setError(vaultError instanceof Error ? vaultError.message : 'Could not unlock the profile.')
+		} finally {
+			setVaultBusy(false)
+		}
+	}
+
+	function deleteProfile() {
+		clearVault()
+		setVaultMeta(null)
+		setProfileName('')
+		setVaultPassword('')
+		setApiKey('')
+		setModels([])
+		setError('')
+	}
 
 	async function loadModels() {
 		if (!apiKey.trim()) {
@@ -138,7 +211,11 @@ function App() {
 		setMessages([])
 		setDraft('')
 		setError('')
+		setWorkspaceMode('chat')
+		requestAnimationFrame(() => composerRef.current?.focus())
 	}
+
+	const previewHtml = extractHtml(messages)
 
 	if (showLanding) return <LandingPage onStart={() => setShowLanding(false)} />
 
@@ -148,14 +225,14 @@ function App() {
 				<button className="side-brand" onClick={() => setShowLanding(true)}><span className="kimi-mark">P</span><span><b>Playbeat AI</b><small>YOUR CREATIVE CO-PILOT</small></span></button>
 				<button className="new-convo" onClick={startNewChat}><span>+ New conversation</span><span className="kbd">Ctrl K</span></button>
 				<nav className="side-nav" aria-label="Workspace">
-					<button className="active"><span>◎</span>Chat</button>
-					<button onClick={() => setDraft('Research this topic in depth: ')}><span>⌕</span>Research</button>
-					<button onClick={() => setDraft('Help me design ')}><span>◇</span>Design</button>
+					<button className={workspaceMode === 'chat' ? 'active' : ''} onClick={() => openWorkspaceMode('chat')}><span>◎</span>Chat</button>
+					<button className={workspaceMode === 'research' ? 'active' : ''} onClick={() => openWorkspaceMode('research')}><span>⌕</span>Research</button>
+					<button className={workspaceMode === 'design' ? 'active' : ''} onClick={() => openWorkspaceMode('design')}><span>◇</span>Design</button>
 					<button onClick={() => setSettingsOpen(true)}><span>⚙</span>Settings</button>
 				</nav>
 				<div className="side-label">YOUR WORKSPACE</div>
 				<div className="side-item"><span className="sw" />OpenAI workspace</div>
-				<div className="connection"><span className={apiKey ? 'status-dot ready' : 'status-dot'} />{apiKey ? 'API connected' : 'API key needed'}</div>
+				<div className="connection"><span className={apiKey ? 'status-dot ready' : 'status-dot'} />{apiKey ? `${profileName || 'Session'} connected` : vaultMeta ? `${vaultMeta.profileName} locked` : 'API key needed'}</div>
 			</aside>
 
 			<section className="kimi-main">
@@ -195,25 +272,38 @@ function App() {
 				<div className="composer-wrap">
 					{error && <div className="error-banner">{error}</div>}
 					<form className="composer" onSubmit={sendMessage}>
-						<textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Ask anything, or imagine something new..." rows={2} />
+						<textarea ref={composerRef} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Ask anything, or imagine something new..." rows={2} />
 						<div className="composer-foot"><span className="model-chip">{model}</span><div><span className="meta">Local history</span><button className="send-btn" type="submit" disabled={busy || !draft.trim()} aria-label="Send message">{busy ? '…' : '↑'}</button></div></div>
 					</form>
-					<div className="toolbar"><button onClick={() => setDraft('Create a slide outline for ')}>▤ Slides</button><button onClick={() => setDraft('Research ')}>⌕ Deep Research</button><button onClick={() => setDraft('Build ')}>⚒ Build</button><button onClick={() => setDraft('Draft a document about ')}>▧ Docs</button></div>
+					<div className="toolbar"><button onClick={() => setDraft('Create a slide outline for ')}>▤ Slides</button><button onClick={() => setDraft('Research ')}>⌕ Deep Research</button><button onClick={() => setDraft('Build a complete responsive website in one HTML code block for ')}>⚒ Build website</button><button onClick={() => setPreviewOpen(true)} disabled={!previewHtml}>▣ Preview</button></div>
 				</div>
 			</section>
 
 			{settingsOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false) }}>
 				<section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
 					<div className="modal-heading"><div><span className="modal-kicker">CONNECTION</span><h2 id="settings-title">Model settings</h2></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="Close settings">×</button></div>
-					<label>API endpoint<input value={endpoint} onChange={(event) => setEndpoint(event.target.value)} placeholder={defaultEndpoint} /></label>
+					{error && <div className="error-banner">{error}</div>}
+					<label>API connection<input value={endpoint} readOnly aria-readonly="true" /></label>
 					<label>Model<input list="openai-models" value={model} onChange={(event) => setModel(event.target.value)} placeholder="gpt-4.1-mini" /></label>
 					<datalist id="openai-models">{models.map((item) => <option value={item.id} key={item.id} />)}</datalist>
 					<label>OpenAI API key<input type="password" autoComplete="off" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="Enter your OpenAI API key" /></label>
-					<p className="key-note">Your key stays in this browser session and is sent directly to the configured API.</p>
+					<div className="profile-divider"><span>ENCRYPTED PROFILE</span></div>
+					<label>Profile name<input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="My profile" /></label>
+					<label>Profile password<input type="password" autoComplete="new-password" value={vaultPassword} onChange={(event) => setVaultPassword(event.target.value)} placeholder="At least 8 characters" /></label>
+					<label>Keep encrypted key for<select value={vaultDays} onChange={(event) => setVaultDays(event.target.value)}><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select></label>
+					<p className="key-note">The key is encrypted on this device and deleted automatically after expiry. Your profile password is never stored.</p>
+					{vaultMeta && <div className="saved-profile"><span><b>{vaultMeta.profileName}</b><small>Expires {new Date(vaultMeta.expiresAt).toLocaleDateString()}</small></span><button onClick={deleteProfile}>Delete</button></div>}
+					<div className="profile-actions"><button className="secondary-button" onClick={() => void unlockProfile()} disabled={!vaultMeta || vaultBusy}>{vaultBusy ? 'Working...' : 'Unlock saved profile'}</button><button className="secondary-button" onClick={() => void saveProfile()} disabled={vaultBusy}>{vaultMeta ? 'Replace saved profile' : 'Save encrypted profile'}</button></div>
 					<button className="secondary-button" onClick={() => void loadModels()} disabled={loadingModels}>{loadingModels ? 'Loading models...' : 'Load available models'}</button>
 					<button className="save-button" onClick={() => { setSettingsOpen(false); setError('') }}>Done <span>→</span></button>
 				</section>
 			</div>}
+				{previewOpen && <div className="preview-backdrop">
+					<section className="website-preview" role="dialog" aria-modal="true" aria-label="Website preview">
+						<header><div><span>WEBSITE PREVIEW</span><b>Sandboxed output</b></div><button onClick={() => setPreviewOpen(false)} aria-label="Close preview">×</button></header>
+						<iframe title="Generated website preview" sandbox="allow-scripts" srcDoc={previewHtml} />
+					</section>
+				</div>}
 		</main>
 	)
 }
