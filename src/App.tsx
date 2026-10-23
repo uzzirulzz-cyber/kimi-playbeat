@@ -29,7 +29,7 @@ function LandingPage({ onStart }: { onStart: () => void }) {
 	return (
 		<main className="landing-page">
 			<nav className="landing-nav">
-				<div className="kimi-brand"><span className="kimi-mark">P</span>Playbeat AI</div>
+				<div className="kimi-brand"><img className="brand-logo" src="/kimi-playbeat-logo.png" alt="Kimi Playbeat" /></div>
 				<div className="landing-links"><a href="#capabilities">Capabilities</a><button onClick={onStart}>Open workspace</button></div>
 				<button className="btn-gold" onClick={onStart}>Start creating</button>
 			</nav>
@@ -279,7 +279,7 @@ function App() {
 	return (
 		<main className="kimi-shell">
 			<aside className="kimi-sidebar">
-				<button className="side-brand" onClick={() => setShowLanding(true)}><span className="kimi-mark">P</span><span><b>Playbeat AI</b><small>YOUR CREATIVE CO-PILOT</small></span></button>
+				<button className="side-brand" onClick={() => setShowLanding(true)}><img className="brand-logo compact" src="/kimi-playbeat-logo.png" alt="Kimi Playbeat" /><span><b>Playbeat AI</b><small>YOUR CREATIVE CO-PILOT</small></span></button>
 				<button className="new-convo" onClick={startNewChat}><span>+ New conversation</span><span className="kbd">Ctrl K</span></button>
 				<nav className="side-nav" aria-label="Workspace">
 					<button className={workspaceView === 'chat' && workspaceMode === 'chat' ? 'active' : ''} onClick={() => openWorkspaceMode('chat')}><span>◎</span>Chat</button>
@@ -298,7 +298,7 @@ function App() {
 
 			<section className="kimi-main">
 				<header className="kimi-nav">
-					<div className="kimi-brand"><span className="kimi-mark">✦</span>Playbeat AI <span className="crumb">/ {workspaceView === 'chat' ? 'Conversation' : workspaceView === 'library' ? 'Library' : 'Explore'}</span></div>
+					<div className="kimi-brand"><img className="brand-logo compact" src="/kimi-playbeat-logo.png" alt="Kimi Playbeat" /><span className="crumb">/ {workspaceView === 'chat' ? 'Conversation' : workspaceView === 'library' ? 'Library' : 'Explore'}</span></div>
 					<div className="top-actions">
 						<button className="model-chip model-button" onClick={() => { setSettingsSection('api'); setSettingsOpen(true) }}>{model}</button>
 						<button className="gear-btn" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings">⚙</button>
